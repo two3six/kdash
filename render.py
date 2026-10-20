@@ -12,8 +12,8 @@ LAT, LON, PLACE = 33.0198, -96.6989, "Plano, TX"
 CLOCK_BOX = (560, 14, 1052, 180)
 SIZES = [(600, 800), (758, 1024), (1072, 1448), (1236, 1648), (1264, 1680), (1860, 2480)]
 DEFAULT_SIZE = (600, 800)   # keep in sync with OVERLAY_* in Kindle config.sh
-TEAMS = [("football/nfl", "dal", "Cowboys"), ("basketball/nba", "dal", "Mavericks"),
-         ("baseball/mlb", "tex", "Rangers"), ("hockey/nhl", "dal", "Stars")]
+TEAMS = [("football/nfl", "dal", "Cowboys"), ("hockey/nhl", "dal", "Stars"),
+         ("football/college-football", "235", "Memphis"), ("football/college-football", "2633", "Tennessee")]
 TICKERS = [("^GSPC", "S&P 500"), ("AAPL", "AAPL"), ("TSLA", "TSLA"), ("NVDA", "NVDA")]
 FEEDS = [("Free Press", "https://www.thefp.com/feed"),
          ("Daily Wire", "https://www.dailywire.com/feeds/rss.xml"),
@@ -49,6 +49,7 @@ def weather():
 
 def team(path, abbr, name):
     d = getj(f"https://site.api.espn.com/apis/site/v2/sports/{path}/teams/{abbr}/schedule")
+    myid = str(d["team"]["id"])     # match competitors by team id (works for pro + college)
     last = nxt = None
     for ev in d.get("events", []):
         st = ev["competitions"][0]["status"]["type"]["state"]
@@ -57,7 +58,7 @@ def team(path, abbr, name):
     def fmt_last(ev):
         c = ev["competitions"][0]; me = op = None
         for x in c["competitors"]:
-            if x["team"]["abbreviation"].lower() == abbr: me = x
+            if str(x["team"]["id"]) == myid: me = x
             else: op = x
         s = lambda x: (x.get("score") or {}).get("displayValue", "?")
         wl = "W" if me.get("winner") else ("L" if op.get("winner") else "T")
@@ -65,8 +66,8 @@ def team(path, abbr, name):
         return f"{wl} {s(me)}-{s(op)} {at} {op['team']['abbreviation']}"
     def fmt_next(ev):
         c = ev["competitions"][0]
-        op = [x for x in c["competitors"] if x["team"]["abbreviation"].lower() != abbr][0]
-        me = [x for x in c["competitors"] if x["team"]["abbreviation"].lower() == abbr][0]
+        op = [x for x in c["competitors"] if str(x["team"]["id"]) != myid][0]
+        me = [x for x in c["competitors"] if str(x["team"]["id"]) == myid][0]
         at = "vs" if me.get("homeAway") == "home" else "@"
         t = dt.datetime.fromisoformat(ev["date"].replace("Z", "+00:00")).astimezone(TZ)
         live = c["status"]["type"]["state"] == "in"
@@ -236,17 +237,18 @@ def render(out):
         d.text((40, y + 60), "Weather unavailable", font=font(44, True)); y += 640
 
     # Sports 2x2
-    y = section(d, y, "Dallas sports")
+    y = section(d, y, "Sports")
     colw = (W - 80) / 2
     for k, s in enumerate(sports):
         x = 40 + colw*(k % 2); yy = y + 72*(k // 2)
         name = TEAMS[k][2]
         d.text((x, yy), name, font=font(28, True), fill=BLACK)
         if s:
-            d.text((x + 190, yy), fit(d, s[1], font(28), colw - 200), font=font(28), fill=BLACK)
+            nx = max(175, tw(d, name, font(28, True)) + 18)
+            d.text((x + nx, yy), fit(d, s[1], font(28), colw - nx - 10), font=font(28), fill=BLACK)
             d.text((x, yy + 36), fit(d, s[2], font(24), colw - 20), font=font(24), fill=DARK)
         else:
-            d.text((x + 190, yy), "unavailable", font=font(26), fill=MID)
+            d.text((x + 175, yy), "unavailable", font=font(26), fill=MID)
     y += 150
 
     # Markets
