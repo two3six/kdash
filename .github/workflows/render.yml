@@ -1,0 +1,24 @@
+name: render-dashboard
+on:
+  schedule:
+    - cron: "*/15 * * * *"   # GitHub may delay scheduled runs 5-30 min at busy times
+  workflow_dispatch: {}
+permissions:
+  contents: write
+concurrency: { group: render, cancel-in-progress: true }
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install -q pillow==12.*
+      - run: mkdir -p public && python3 render.py public/dash.png && date -u > public/updated.txt
+      - uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./public
+          publish_branch: gh-pages
+          force_orphan: true      # keep gh-pages to a single commit (repo stays tiny)

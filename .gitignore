@@ -1,0 +1,6 @@
+sample.png
+live.png
+kindle/
+*.tgz
+__pycache__/
+public/
