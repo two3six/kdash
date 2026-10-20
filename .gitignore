@@ -4,3 +4,4 @@ kindle/
 *.tgz
 __pycache__/
 public/
+sample*.png

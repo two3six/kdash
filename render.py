@@ -6,6 +6,16 @@ import json, math, os, sys, datetime as dt, urllib.request, xml.etree.ElementTre
 from zoneinfo import ZoneInfo
 from PIL import Image, ImageDraw, ImageFont
 
+# ===== Markets: edit this list (Yahoo symbol, label). Shown 3 per row, up to 6. =====
+TICKERS = [
+    ("^GSPC",   "S&P 500"),
+    ("TSLA",    "TSLA"),
+    ("NVDA",    "NVDA"),
+    ("NSP",     "NSP"),       # Insperity, Inc. (NYSE)
+    ("SPCX",    "SPCX"),      # Space Exploration Technologies Corp. (Nasdaq)
+    ("BTC-USD", "Bitcoin"),
+]
+
 W, H = 1072, 1448
 TZ = ZoneInfo("America/Chicago")
 LAT, LON, PLACE = 33.0198, -96.6989, "Plano, TX"
@@ -14,7 +24,6 @@ SIZES = [(600, 800), (758, 1024), (1072, 1448), (1236, 1648), (1264, 1680), (186
 DEFAULT_SIZE = (600, 800)   # keep in sync with OVERLAY_* in Kindle config.sh
 TEAMS = [("football/nfl", "dal", "Cowboys"), ("hockey/nhl", "dal", "Stars"),
          ("football/college-football", "235", "Memphis"), ("football/college-football", "2633", "Tennessee")]
-TICKERS = [("^GSPC", "S&P 500"), ("AAPL", "AAPL"), ("TSLA", "TSLA"), ("NVDA", "NVDA")]
 FEEDS = [("Free Press", "https://www.thefp.com/feed"),
          ("Daily Wire", "https://www.dailywire.com/feeds/rss.xml"),
          ("Fox", "https://moxie.foxnews.com/google-publisher/politics.xml"),
@@ -249,23 +258,24 @@ def render(out):
             d.text((x, yy + 36), fit(d, s[2], font(24), colw - 20), font=font(24), fill=DARK)
         else:
             d.text((x + 175, yy), "unavailable", font=font(26), fill=MID)
-    y += 150
+    y += 144
 
-    # Markets
+    # Markets: 3 columns x N rows; label on top, price + change on one line
     y = section(d, y, "Markets")
-    cw = (W - 80) / 4
+    cols = 3; cw = (W - 80) / cols; RH = 68
     for k, (lab, q) in enumerate(quotes):
-        x = 40 + cw*k
-        d.text((x, y), lab, font=font(26, True), fill=BLACK)
+        x = 40 + cw*(k % cols); yy = y + RH*(k // cols)
+        d.text((x, yy), lab, font=font(24, True), fill=DARK)
         if q:
             p, pct = q
-            d.text((x, y + 32), f"{p:,.2f}", font=font(30, True), fill=BLACK)
+            ps = f"{p:,.0f}" if p >= 10000 else f"{p:,.2f}"
+            d.text((x, yy + 28), ps, font=font(30, True), fill=BLACK)
             if pct is not None:
-                s = f"{'▲' if pct >= 0 else '▼'} {abs(pct):.2f}%"
-                d.text((x, y + 70), s, font=font(26, pct < 0), fill=BLACK)
+                px = x + tw(d, ps, font(30, True)) + 12
+                d.text((px, yy + 33), f"{'▲' if pct >= 0 else '▼'}{abs(pct):.2f}%", font=font(24, pct < 0), fill=BLACK)
         else:
-            d.text((x, y + 32), "n/a", font=font(28), fill=MID)
-    y += 100
+            d.text((x, yy + 28), "n/a", font=font(28), fill=MID)
+    y += RH * ((len(quotes) + cols - 1) // cols) + 4
 
     # Headlines
     y = section(d, y, "Headlines")
