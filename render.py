@@ -9,7 +9,9 @@ from PIL import Image, ImageDraw, ImageFont
 W, H = 1072, 1448
 TZ = ZoneInfo("America/Chicago")
 LAT, LON, PLACE = 33.0198, -96.6989, "Plano, TX"
-CLOCK_BOX = (560, 14, 1052, 180)   # keep in sync with OVERLAY_* in Kindle config.sh
+CLOCK_BOX = (560, 14, 1052, 180)
+SIZES = [(600, 800), (758, 1024), (1072, 1448), (1236, 1648), (1264, 1680), (1860, 2480)]
+DEFAULT_SIZE = (600, 800)   # keep in sync with OVERLAY_* in Kindle config.sh
 TEAMS = [("football/nfl", "dal", "Cowboys"), ("basketball/nba", "dal", "Mavericks"),
          ("baseball/mlb", "tex", "Rangers"), ("hockey/nhl", "dal", "Stars")]
 TICKERS = [("^GSPC", "S&P 500"), ("AAPL", "AAPL"), ("TSLA", "TSLA"), ("NVDA", "NVDA")]
@@ -289,11 +291,17 @@ def render(out):
     rtext(d, W - 40, H - 36, "Open-Meteo · ESPN · Yahoo · RSS", font(22), DARK)
 
     base, ext = os.path.splitext(out)
-    im.save(base + "-1072x1448" + ext, optimize=True)            # true PW3 (300 ppi) size
-    small = im.resize((758, 1024), Image.LANCZOS)                 # PW1/PW2-class 212 ppi framebuffer
-    small.save(base + "-758x1024" + ext, optimize=True)
-    # dash.png = size of the user's actual framebuffer (fbink reported/observed 758x1024)
-    {"758": small, "1072": im}[os.environ.get("KDASH_WIDTH", "758")].save(out, optimize=True)
+    def fitted(w, h):
+        if (w, h) == im.size: return im
+        k = min(w / W, h / H)
+        sc = im.resize((round(W * k), round(H * k)), Image.LANCZOS)
+        c = Image.new("L", (w, h), WHITE); c.paste(sc, ((w - sc.width) // 2, (h - sc.height) // 2))
+        return c
+    # Common Kindle framebuffer sizes; the Kindle picks dash-<W>x<H>.png from `fbink -e`.
+    for w, h in SIZES:
+        fitted(w, h).save(f"{base}-{w}x{h}{ext}", optimize=True)
+    dw, dh = DEFAULT_SIZE
+    fitted(dw, dh).save(out, optimize=True)     # dash.png fallback = size seen in user's photo
     print("wrote", out, "and size variants")
 
 if __name__ == "__main__":
