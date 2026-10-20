@@ -6,14 +6,13 @@ import json, math, os, sys, datetime as dt, urllib.request, xml.etree.ElementTre
 from zoneinfo import ZoneInfo
 from PIL import Image, ImageDraw, ImageFont
 
-# ===== Markets: edit this list (Yahoo symbol, label). Shown 3 per row, up to 6. =====
+# ===== Markets: edit this list (Yahoo symbol, label). Shown on one row (5 fit best). =====
 TICKERS = [
     ("^GSPC",   "S&P 500"),
     ("TSLA",    "TSLA"),
     ("NVDA",    "NVDA"),
     ("NSP",     "NSP"),       # Insperity, Inc. (NYSE)
     ("SPCX",    "SPCX"),      # Space Exploration Technologies Corp. (Nasdaq)
-    ("BTC-USD", "Bitcoin"),
 ]
 
 W, H = 1072, 1448
@@ -260,22 +259,21 @@ def render(out):
             d.text((x + 175, yy), "unavailable", font=font(26), fill=MID)
     y += 144
 
-    # Markets: 3 columns x N rows; label on top, price + change on one line
+    # Markets: one row; each cell = label / price / change
     y = section(d, y, "Markets")
-    cols = 3; cw = (W - 80) / cols; RH = 68
+    cols = max(1, len(quotes)); cw = (W - 80) / cols
     for k, (lab, q) in enumerate(quotes):
-        x = 40 + cw*(k % cols); yy = y + RH*(k // cols)
-        d.text((x, yy), lab, font=font(24, True), fill=DARK)
+        x = 40 + cw*k
+        d.text((x, y), fit(d, lab, font(24, True), cw - 8), font=font(24, True), fill=DARK)
         if q:
             p, pct = q
             ps = f"{p:,.0f}" if p >= 10000 else f"{p:,.2f}"
-            d.text((x, yy + 28), ps, font=font(30, True), fill=BLACK)
+            d.text((x, y + 28), fit(d, ps, font(32, True), cw - 8), font=font(32, True), fill=BLACK)
             if pct is not None:
-                px = x + tw(d, ps, font(30, True)) + 12
-                d.text((px, yy + 33), f"{'▲' if pct >= 0 else '▼'}{abs(pct):.2f}%", font=font(24, pct < 0), fill=BLACK)
+                d.text((x, y + 66), f"{'▲' if pct >= 0 else '▼'} {abs(pct):.2f}%", font=font(24, pct < 0), fill=BLACK)
         else:
-            d.text((x, yy + 28), "n/a", font=font(28), fill=MID)
-    y += RH * ((len(quotes) + cols - 1) // cols) + 4
+            d.text((x, y + 28), "n/a", font=font(28), fill=MID)
+    y += 98
 
     # Headlines
     y = section(d, y, "Headlines")
