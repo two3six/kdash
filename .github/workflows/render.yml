@@ -1,7 +1,7 @@
 name: render-dashboard
 on:
   schedule:
-    - cron: "*/15 * * * *"   # GitHub may delay scheduled runs 5-30 min at busy times
+    - cron: "*/5 * * * *"    # GitHub may delay scheduled runs at busy times
   workflow_dispatch: {}
 permissions:
   contents: write

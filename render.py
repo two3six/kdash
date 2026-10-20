@@ -275,11 +275,11 @@ def render(out):
         k0 = (slot * nfit) % len(news)
         news = (news[k0:] + news[:k0])[:nfit]
     for src, t in news:
-        lines = wrap(d, t, fH, W - 80 - 150, 1)
+        lines = wrap(d, t, fH, W - 40 - 205, 1)
         need = LH
         if y + need > bottom: break
         d.text((40, y + 5), src.upper(), font=fS, fill=DARK)
-        for j, ln in enumerate(lines): d.text((190, y + 32*j), ln, font=fH, fill=BLACK)
+        for j, ln in enumerate(lines): d.text((205, y + 32*j), ln, font=fH, fill=BLACK)
         y += need
     if not news: d.text((40, y), "Headlines unavailable", font=font(26), fill=MID)
 
@@ -288,8 +288,13 @@ def render(out):
     d.text((40, H - 36), f"Updated {now:%-I:%M %p %a}", font=font(22), fill=DARK)
     rtext(d, W - 40, H - 36, "Open-Meteo · ESPN · Yahoo · RSS", font(22), DARK)
 
-    im.save(out, optimize=True)
-    print("wrote", out)
+    base, ext = os.path.splitext(out)
+    im.save(base + "-1072x1448" + ext, optimize=True)            # true PW3 (300 ppi) size
+    small = im.resize((758, 1024), Image.LANCZOS)                 # PW1/PW2-class 212 ppi framebuffer
+    small.save(base + "-758x1024" + ext, optimize=True)
+    # dash.png = size of the user's actual framebuffer (fbink reported/observed 758x1024)
+    {"758": small, "1072": im}[os.environ.get("KDASH_WIDTH", "758")].save(out, optimize=True)
+    print("wrote", out, "and size variants")
 
 if __name__ == "__main__":
     render(sys.argv[1] if len(sys.argv) > 1 else os.path.join(HERE, "sample.png"))
