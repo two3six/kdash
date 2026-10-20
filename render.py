@@ -86,12 +86,19 @@ def team(path, abbr, name):
     return name, (fmt_last(last) if last else "—"), (fmt_next(nxt) if nxt else "Season over")
 
 def quote(sym):
+    """Price and regular-session daily % change vs the PREVIOUS trading day's close.
+    (Never uses meta.chartPreviousClose: that is the close before the whole 5-day range.)"""
     d = getj("https://query1.finance.yahoo.com/v8/finance/chart/%s?range=5d&interval=1d" % urllib.request.quote(sym))
-    m = d["chart"]["result"][0]["meta"]
-    p = m["regularMarketPrice"]; prev = m.get("chartPreviousClose") or m.get("previousClose")
-    pct = m.get("regularMarketChangePercent")
-    if pct is None and prev: pct = (p - prev) / prev * 100
-    return p, pct
+    r = d["chart"]["result"][0]; m = r["meta"]
+    p = m["regularMarketPrice"]
+    mday = dt.datetime.fromtimestamp(m["regularMarketTime"], dt.timezone.utc).date()
+    prev = None
+    for t, c in zip(r.get("timestamp", []), r["indicators"]["quote"][0].get("close", [])):
+        if c is not None and dt.datetime.fromtimestamp(t, dt.timezone.utc).date() < mday:
+            prev = c                       # last close strictly before the current session
+    if prev:
+        return p, (p - prev) / prev * 100
+    return p, m.get("regularMarketChangePercent")
 
 def headlines():
     out = []
